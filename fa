@@ -1,0 +1,81 @@
+(function () {
+    'use strict';
+
+    function init() {
+        // Реєстрація плагіна в системі Lampa
+        Lampa.Plugins.add('custom_home_section', {
+            title: 'Власний блок на головній',
+            description: 'Додає кастомну стрічку контенту на головну сторінку',
+            version: '1.0.0',
+            author: 'Developer'
+        });
+
+        // Відстежуємо запуск головної сторінки ('main')
+        Lampa.Listener.follow('activity', function (e) {
+            if (e.type === 'start' && e.object.activity.component === 'main') {
+                addCustomSection(e.object.activity);
+            }
+        });
+    }
+
+    function addCustomSection(activity) {
+        var body = activity.render().find('.scroll__body');
+
+        // Перевіряємо, щоб блок не дублювався при повторному відкритті
+        if (body.find('.custom-home-row').length) return;
+
+        // 1. Створюємо HTML-структуру стрічки
+        var rowHtml = $(
+            '<div class="category-full custom-home-row">' +
+                '<div class="category-full__title">🔥 Моя підбірка</div>' +
+                '<div class="category-full__body scroll--horizontal">' +
+                    '<div class="scroll__body"></div>' +
+                '</div>' +
+            '</div>'
+        );
+
+        // Вставляємо блок на самий верх головної сторінки (або замініть .prepend на .append)
+        body.prepend(rowHtml);
+
+        // 2. Джерело даних (приклад тестових елементів TMDB)
+        var items = [
+            { title: 'Матриця', year: '1999', poster: 'https://image.tmdb.org/t/p/w300/f89U3w91B99MStA2359R99sA4.jpg', id: 603, type: 'movie' },
+            { title: 'Інтерстеллар', year: '2014', poster: 'https://image.tmdb.org/t/p/w300/gEU2G3A3A9RA07I0112185.jpg', id: 157336, type: 'movie' }
+        ];
+
+        var container = rowHtml.find('.scroll__body');
+
+        // 3. Генерація карток
+        items.forEach(function (item) {
+            var card = Lampa.Template.get('card', {
+                title: item.title,
+                release_date: item.year
+            });
+
+            // Встановлюємо постер
+            card.find('.card__img').attr('src', item.poster);
+
+            // Подія при натисканні (ОК / Enter)
+            card.on('hover:enter', function () {
+                Lampa.Activity.push({
+                    url: '',
+                    title: item.title,
+                    component: 'full',
+                    id: item.id,
+                    method: item.type
+                });
+            });
+
+            container.append(card);
+        });
+    }
+
+    // Запуск після повного завантаження додатка
+    if (window.appready) {
+        init();
+    } else {
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') init();
+        });
+    }
+})();
